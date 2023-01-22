@@ -3,17 +3,18 @@ import os
 import urllib.request
 from werkzeug.utils import secure_filename
 import whisper
+import numpy as np
+import io
+import soundfile as sf
 
 app = Flask(__name__)
-
 app.secret_key = "caircocoders-ednalan"
 
-UPLOAD_FOLDER = 'static/uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+# UPLOAD_FOLDER = 'static/uploads'
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-ALLOWED_EXTENSIONS = set(
-    ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp3', 'mpeg'])
+ALLOWED_EXTENSIONS = set(['mp3', 'mpeg', 'wav'])
 
 
 def allowed_file(filename):
@@ -23,32 +24,29 @@ def allowed_file(filename):
 @app.route('/upload', methods=['POST'])
 def upload_file():
     # check if the post request has the file part
-    print("Request: ", request.files)
-    if 'files[]' not in request.files:
+    if 'file' not in request.files:
         resp = jsonify({'message': 'No file part in the request'})
         resp.status_code = 400
         return resp
 
-    files = request.files.getlist('files[]')
-
+    file = request.files['file']
     errors = {}
-    success = False
-    transcript = {}
+    success = True
+    if file and allowed_file(file.filename):
+        # filename = secure_filename(file.filename)
+        # file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        # file_address = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    for file in files:
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            file_address = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # converting auido to text using whisper
+        data, sample_rate = sf.read(io.BytesIO(file.read()))
+        model = whisper.load_model("base")
+        transcript = model.transcribe(
+            np.float32(data), fp16=False)
+        success = True
+        print(transcript)
 
-            # converting auido to text using whisper
-            model = whisper.load_model("base")
-            transcript = model.transcribe(
-                "static/uploads/"+filename, fp16=False)
-            success = True
-
-        else:
-            errors[file.filename] = 'File type is not allowed'
+    else:
+        errors[file.filename] = 'File type is not allowed'
 
     if success and errors:
         errors['message'] = 'File(s) successfully uploaded'
