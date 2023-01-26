@@ -6,13 +6,16 @@ import whisper
 import numpy as np
 import io
 import soundfile as sf
+import librosa as lb
+import miniaudio
+from pydub import AudioSegment
 
 app = Flask(__name__)
 app.secret_key = "caircocoders-ednalan"
 
-# UPLOAD_FOLDER = 'static/uploads'
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 ALLOWED_EXTENSIONS = set(['mp3', 'mpeg', 'wav'])
 
@@ -33,15 +36,26 @@ def upload_file():
     errors = {}
     success = True
     if file and allowed_file(file.filename):
-        # filename = secure_filename(file.filename)
-        # file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        # file_address = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(
+            app.config['UPLOAD_FOLDER'], filename).replace("\\", "/"))
+        file_address = os.path.join(
+            app.config['UPLOAD_FOLDER'], filename).replace("/", "\\")
+
+        print(file_address)
 
         # converting auido to text using whisper
-        data, sample_rate = sf.read(io.BytesIO(file.read()))
+        # data, sample_rate = lb.load(io.BytesIO(
+        #     file.read()), dtype="float32")
+        # data = data.T
+        # data_resampled = lb.resample(data, sample_rate, 44100)
+
+        # data = AudioSegment.from_raw(io.BytesIO(file.read()))
+        # print(data)
+
         model = whisper.load_model("base")
         transcript = model.transcribe(
-            np.float32(data), fp16=False)
+            ".\\" + file_address, fp16=False)
         success = True
         print(transcript)
 
