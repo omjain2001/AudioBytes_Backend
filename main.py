@@ -6,8 +6,11 @@ import whisper
 import numpy as np
 import io
 import soundfile as sf
+from flask_cors import CORS
+
 
 app = Flask(__name__)
+CORS(app)
 app.secret_key = "caircocoders-ednalan"
 
 # UPLOAD_FOLDER = 'static/uploads'
@@ -22,6 +25,7 @@ def allowed_file(filename):
 
 
 @app.route('/upload', methods=['POST'])
+
 def upload_file():
     # check if the post request has the file part
     if 'file' not in request.files:
@@ -29,6 +33,7 @@ def upload_file():
         resp.status_code = 400
         return resp
 
+    print("Entered upload file")
     file = request.files['file']
     errors = {}
     success = True
@@ -63,6 +68,8 @@ def upload_file():
         resp = jsonify(errors)
         resp.status_code = 500
         return resp
+
+
 
 
 if __name__ == '__main__':
