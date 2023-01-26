@@ -28,7 +28,12 @@ def main():
 @app.route('/timestamps', methods=['POST'])
 def getTimestamps():
 
-    req_data = request.get_json()
+    content_type = request.headers.get('Content-Type')
+    if (content_type == 'application/json'):
+        req_data = request.get_json()
+    else:
+        return 'Content-Type not supported!'
+
     search_word = ""
     transcript_data = {}
 
