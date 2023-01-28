@@ -36,7 +36,7 @@ def main():
 @app.route("/upload", methods=["POST"])
 def upload():
     transcript = ""
-    transcripts = []
+    transcripts = {}
     if request.method == "POST":
         if "file" not in request.files:
             return "No File Uploaded"
@@ -54,7 +54,8 @@ def upload():
                 temp = NamedTemporaryFile()
                 fileStorage.save(temp)
                 result = model.transcribe(temp.name)
-                transcripts.append(result)
+                transcripts = result
+
 
         # if file:
         #     recognizer = sr.Recognizer()
@@ -63,7 +64,7 @@ def upload():
         #         data = recognizer.record(source)
         #     transcript = recognizer.recognize_google(data, key=None)
 
-    return transcript
+    return transcripts
 
 
 @app.route('/timestamps', methods=['POST'])
@@ -77,6 +78,7 @@ def getTimestamps():
 
     search_word = ""
     transcript_data = {}
+    
 
     if req_data:
         if 'transcript_data' in req_data:
@@ -84,8 +86,8 @@ def getTimestamps():
 
         if 'search_word' in req_data:
             search_word = req_data['search_word']
-
-    trans_segs = transcript_data["segments"]
+    
+    trans_segs = transcript_data['segments']
     timestamps = []
 
     for i in trans_segs:
