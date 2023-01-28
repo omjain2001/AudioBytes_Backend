@@ -9,6 +9,7 @@ import soundfile as sf
 import speech_recognition as sr
 from tempfile import NamedTemporaryFile
 from flask_cors import CORS
+import re
 
 # Load the Whisper model:
 model = whisper.load_model('base')
@@ -91,10 +92,12 @@ def getTimestamps():
     timestamps = []
 
     for i in trans_segs:
-        if search_word in i['text']:
+        result = re.findall('\\b'+search_word+'\\b', i['text'], flags=re.IGNORECASE)
+        if len(result)>0:
             start_time = round(i['start'], 2)
             end_time = round(i['end'], 2)
             timestamps.append([start_time, end_time])
+           
 
     return timestamps
 
