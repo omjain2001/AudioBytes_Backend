@@ -1,4 +1,4 @@
-from flask import Flask, json, request, jsonify
+from flask import Flask, request, redirect, jsonify
 import os
 import urllib.request
 from werkzeug.utils import secure_filename
@@ -6,16 +6,18 @@ import whisper
 import numpy as np
 import io
 import soundfile as sf
-import librosa as lb
-import miniaudio
-from pydub import AudioSegment
+import speech_recognition as sr
+from tempfile import NamedTemporaryFile
+
+# Load the Whisper model:
+model = whisper.load_model('base')
 
 app = Flask(__name__)
 app.secret_key = "caircocoders-ednalan"
 
-UPLOAD_FOLDER = 'static/uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+# UPLOAD_FOLDER = 'static/uploads'
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 ALLOWED_EXTENSIONS = set(['mp3', 'mpeg', 'wav'])
 
@@ -24,59 +26,73 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    # check if the post request has the file part
-    if 'file' not in request.files:
-        resp = jsonify({'message': 'No file part in the request'})
-        resp.status_code = 400
-        return resp
+@app.route('/')
+def main():
+    return "Is this Working ?"
 
-    file = request.files['file']
-    errors = {}
-    success = True
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(
-            app.config['UPLOAD_FOLDER'], filename).replace("\\", "/"))
-        file_address = os.path.join(
-            app.config['UPLOAD_FOLDER'], filename).replace("/", "\\")
 
-        print(file_address)
+@app.route("/upload", methods=["POST"])
+def upload():
+    transcript = ""
+    transcripts = []
+    if request.method == "POST":
+        if "file" not in request.files:
+            return "No File Uploaded"
 
-        # converting auido to text using whisper
-        # data, sample_rate = lb.load(io.BytesIO(
-        #     file.read()), dtype="float32")
-        # data = data.T
-        # data_resampled = lb.resample(data, sample_rate, 44100)
+        file = request.files["file"]
+        if file.filename == "":
+            return "Filename cant be empty"
 
-        # data = AudioSegment.from_raw(io.BytesIO(file.read()))
-        # print(data)
+        print("Form Data Received !!")
+        if file:
+            uploads_dict = request.files.to_dict()
+            print("Items : ", uploads_dict.items())
 
-        model = whisper.load_model("base")
-        transcript = model.transcribe(
-            ".\\" + file_address, fp16=False)
-        success = True
-        print(transcript)
+            for fileName, fileStorage in uploads_dict.items():
+                temp = NamedTemporaryFile()
+                fileStorage.save(temp)
+                result = model.transcribe(temp.name)
+                transcripts.append(result)
 
+        # if file:
+        #     recognizer = sr.Recognizer()
+        #     audioFile = sr.AudioFile(file)
+        #     with audioFile as source:
+        #         data = recognizer.record(source)
+        #     transcript = recognizer.recognize_google(data, key=None)
+
+    return transcripts
+
+
+@app.route('/timestamps', methods=['POST'])
+def getTimestamps():
+
+    content_type = request.headers.get('Content-Type')
+    if (content_type == 'application/json'):
+        req_data = request.get_json()
     else:
-        errors[file.filename] = 'File type is not allowed'
+        return 'Content-Type not supported!'
 
-    if success and errors:
-        errors['message'] = 'File(s) successfully uploaded'
-        resp = jsonify(errors)
-        resp.status_code = 500
-        return resp
+    search_word = ""
+    transcript_data = {}
 
-    if success:
-        # resp = jsonify({'message' : 'Files successfully uploaded'})
-        resp = jsonify(transcript)
-        resp.status_code = 201
-        return resp
-    else:
-        resp = jsonify(errors)
-        resp.status_code = 500
-        return resp
+    if req_data:
+        if 'transcript_data' in req_data:
+            transcript_data = req_data['transcript_data']
+
+        if 'search_word' in req_data:
+            search_word = req_data['search_word']
+
+    trans_segs = transcript_data["segments"]
+    timestamps = []
+
+    for i in trans_segs:
+        if search_word in i['text']:
+            start_time = round(i['start'], 2)
+            end_time = round(i['end'], 2)
+            timestamps.append([start_time, end_time])
+
+    return timestamps
 
 
 if __name__ == '__main__':
