@@ -1,12 +1,6 @@
-from flask import Flask, request, redirect, jsonify
-import os
-import urllib.request
-from werkzeug.utils import secure_filename
+from flask import Flask, request, redirect
 import whisper
-import numpy as np
-import io
-import soundfile as sf
-import speech_recognition as sr
+# import speech_recognition as sr
 from tempfile import NamedTemporaryFile
 from flask_cors import CORS
 import re
@@ -17,10 +11,6 @@ model = whisper.load_model('base')
 app = Flask(__name__)
 app.secret_key = "caircocoders-ednalan"
 CORS(app)
-
-# UPLOAD_FOLDER = 'static/uploads'
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 ALLOWED_EXTENSIONS = set(['mp3', 'mpeg', 'wav'])
 
