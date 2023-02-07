@@ -5,7 +5,7 @@ from flask_cors import CORS
 import re
 
 # Load the Whisper model:
-model = whisper.load_model('base')
+model = whisper.load_model('medium')
 
 app = Flask(__name__)
 app.secret_key = "caircocoders-ednalan"
