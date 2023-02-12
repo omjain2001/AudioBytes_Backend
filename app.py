@@ -3,14 +3,19 @@ import whisper
 from tempfile import NamedTemporaryFile
 from flask_cors import CORS
 import re
+import spacy
+
 
 # Load the Whisper model:
 model = whisper.load_model('medium')
 
+# spacy : to get context for a sentence
+nlp = spacy.load("en_core_web_md")
+
+
 app = Flask(__name__)
 CORS(app)
 app.secret_key = "caircocoders-ednalan"
-CORS(app)
 
 ALLOWED_EXTENSIONS = set(['mp3', 'mpeg', 'wav'])
 
@@ -128,6 +133,34 @@ def getTimestamps():
            
 
     return timestamps
+
+
+@app.route('/getContextForSentence', methods=['POST'])
+def getContextForSentence():
+
+    input_sentence = request.input_sentence
+    strArray = request.sentences 
+
+    doc1 = nlp(input_sentence)
+
+    similarity_array_timestamp = []
+    threshold = 0.5
+
+    for i in range(len(strArray)):
+        start_end = []
+        doc2 = nlp(strArray[i].text)
+
+        similarity_score = doc1.similarity(doc2)
+
+        if(similarity_score >= threshold):
+            start_end.append(strArray[i].start)
+            start_end.append(strArray[i].end)
+           
+            similarity_array_timestamp.append(start_end)
+
+
+    return similarity_array
+
 
 
 if __name__ == '__main__':
