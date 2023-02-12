@@ -1,27 +1,16 @@
-from flask import Flask, request, redirect, jsonify
-import os
-import urllib.request
-from werkzeug.utils import secure_filename
+from flask import Flask, request, redirect
 import whisper
-import numpy as np
-import io
-import soundfile as sf
-import speech_recognition as sr
 from tempfile import NamedTemporaryFile
 from flask_cors import CORS
 import re
 
 # Load the Whisper model:
-model = whisper.load_model('base')
+model = whisper.load_model('medium')
 
 app = Flask(__name__)
 CORS(app)
 app.secret_key = "caircocoders-ednalan"
 CORS(app)
-
-# UPLOAD_FOLDER = 'static/uploads'
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 ALLOWED_EXTENSIONS = set(['mp3', 'mpeg', 'wav'])
 
@@ -59,14 +48,52 @@ def upload():
                 transcripts = result
 
 
-        # if file:
-        #     recognizer = sr.Recognizer()
-        #     audioFile = sr.AudioFile(file)
-        #     with audioFile as source:
-        #         data = recognizer.record(source)
-        #     transcript = recognizer.recognize_google(data, key=None)
-
     return transcripts
+
+
+def getLanguage(audio):
+    # load audio and pad/trim it to fit 30 seconds
+    audio = whisper.load_audio(audio)
+    audio = whisper.pad_or_trim(audio)
+
+    # make log-Mel spectrogram and move to the same device as the model
+    mel = whisper.log_mel_spectrogram(audio).to(model.device)
+
+    # detect the spoken language
+    _, probs = model.detect_language(mel)
+    lang = max(probs, key=probs.get)
+    print(f"Detected language: {lang}")
+
+    return lang
+
+@app.route("/final", methods=["POST"])
+def final():
+    transcripts = {}
+    if request.method == "POST":
+        if "file" not in request.files:
+            return "No File Uploaded"
+
+        file = request.files["file"]
+        if file.filename == "":
+            return "Filename cant be empty"
+
+        print("Form Data Received !!")
+        if file:
+            uploads_dict = request.files.to_dict()
+            print("Items : ", uploads_dict.items())
+
+            for fileName, fileStorage in uploads_dict.items():
+                temp = NamedTemporaryFile()
+                fileStorage.save(temp)
+
+                #get language
+                lang = getLanguage(temp.name)
+
+                # get transcription
+                result = model.transcribe(temp.name)
+                transcripts = result
+        
+        return transcripts
 
 
 @app.route('/timestamps', methods=['POST'])
