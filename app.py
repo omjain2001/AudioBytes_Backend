@@ -7,7 +7,7 @@ import spacy
 
 
 # Load the Whisper model:
-model = whisper.load_model('medium')
+model = whisper.load_model('base.en')
 
 # spacy : to get context for a sentence
 nlp = spacy.load("en_core_web_md")
@@ -138,28 +138,37 @@ def getTimestamps():
 @app.route('/getContextForSentence', methods=['POST'])
 def getContextForSentence():
 
-    input_sentence = request.input_sentence
-    strArray = request.sentences 
+    content_type = request.headers.get('Content-Type')
+    if (content_type == 'application/json'):
+        req_data = request.get_json()
+    else:
+        return 'Content-Type not supported!'
+    
+
+    input_sentence = req_data["sentence"]
+    text_array = req_data["transcripts"]
 
     doc1 = nlp(input_sentence)
 
     similarity_array_timestamp = []
     threshold = 0.5
+    
+   
+    for segment in text_array:
 
-    for i in range(len(strArray)):
         start_end = []
-        doc2 = nlp(strArray[i].text)
-
+        doc2 = nlp(segment["text"])
+      
         similarity_score = doc1.similarity(doc2)
 
         if(similarity_score >= threshold):
-            start_end.append(strArray[i].start)
-            start_end.append(strArray[i].end)
+            start_end.append(segment["start"])
+            start_end.append(segment["end"])
            
             similarity_array_timestamp.append(start_end)
 
 
-    return similarity_array
+    return similarity_array_timestamp
 
 
 
