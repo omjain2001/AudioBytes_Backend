@@ -1,19 +1,22 @@
-from flask import Flask, request, redirect, jsonify
+import io
 import os
 import urllib.request
-from werkzeug.utils import secure_filename
-import whisper
+from tempfile import NamedTemporaryFile
+
 import numpy as np
-import io
 import soundfile as sf
 import speech_recognition as sr
-from tempfile import NamedTemporaryFile
+import whisper
+from flask import Flask, jsonify, redirect, request
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
 
 # Load the Whisper model:
 model = whisper.load_model('base')
 
 app = Flask(__name__)
 app.secret_key = "caircocoders-ednalan"
+CORS(app)
 
 # UPLOAD_FOLDER = 'static/uploads'
 # app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -49,10 +52,16 @@ def upload():
             print("Items : ", uploads_dict.items())
 
             for fileName, fileStorage in uploads_dict.items():
-                temp = NamedTemporaryFile()
+                print("Hello")
+                temp = NamedTemporaryFile(
+                    prefix=fileStorage.name, dir="temp")
                 fileStorage.save(temp)
+                print("Name: ", temp.name)
+                head, tail = os.path.split(temp.name)
+                print(tail)
                 result = model.transcribe(temp.name)
                 transcripts.append(result)
+                temp.close()
 
         # if file:
         #     recognizer = sr.Recognizer()
@@ -64,7 +73,7 @@ def upload():
     return transcripts
 
 
-@app.route('/timestamps', methods=['POST'])
+@ app.route('/timestamps', methods=['POST'])
 def getTimestamps():
 
     content_type = request.headers.get('Content-Type')
