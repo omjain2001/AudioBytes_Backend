@@ -1,14 +1,15 @@
-FROM python:3.7-alpine3.17
+FROM python:3.10-slim
 
-WORKDIR /app/
+WORKDIR /app
 
-RUN apk update && apk add git
+RUN apt-get update && apt-get install git -y
+RUN pip3 install "git+https://github.com/openai/whisper.git" 
+RUN pip3 install flask 
+RUN pip3 install flask_cors
+RUN apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
-# RUN pip install torch==1.13.1 -f https://download.pytorch.org/whl/torch_stable.html
+EXPOSE 5000
 
-RUN pip install flask 
-# git+https://github.com/openai/whisper.git soundfile SpeechRecognition Flask-Cors
-
-# CMD ["py", "main.py"]
+CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0"]
