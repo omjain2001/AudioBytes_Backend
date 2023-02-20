@@ -179,48 +179,31 @@ def getTimestampsFromAudio():
     test_audio, test_sr = librosa.load(testAudioFile)
     sample_audio, sample_sr = librosa.load(sampleAudioFile)
 
-    # Display Test Audio Attributes
-    print("Sampling rate: ", test_sr)
-    print("Samples: ", test_audio)
-    print("Frames Length: ", len(test_audio))
-    print("Length of audio: ", (len(test_audio) / test_sr))
-    print(f"Duration (sec): {librosa.get_duration(test_audio, sr=test_sr)}")
-
-    # Display Test Audio Attributes
-    print("Sampling rate: ", sample_sr)
-    print("Samples: ", sample_audio)
-    print("Frames Length: ", len(sample_audio))
-    print("Length of audio: ", (len(sample_audio) / sample_sr))
-    print(
-        f"Duration (sec): {librosa.get_duration(sample_audio, sr=sample_sr)}")
-
     target_sr = 44100
 
-    test_audio_resampled = librosa.resample(test_audio, test_sr, target_sr)
+    ## Resampling the Audios
+    test_audio_resampled = librosa.resample(y=test_audio, orig_sr = test_sr, target_sr = target_sr)
     test_audio_resampled = librosa.to_mono(test_audio_resampled)
 
     sample_audio_resampled = librosa.resample(
-        sample_audio, sample_sr, target_sr)
+        y=sample_audio,orig_sr = sample_sr, target_sr = target_sr)
     sample_audio_resampled = librosa.to_mono(sample_audio_resampled)
 
+    ## MFCC Feature
     window_size = 1024
     hop_length = 512
     test_mfccs = librosa.feature.mfcc(
-        test_audio_resampled, target_sr, n_mfcc=20, hop_length=hop_length, n_fft=window_size)
+        y=test_audio_resampled, sr=target_sr, n_mfcc=20, hop_length=hop_length, n_fft=window_size)
     sample_mfccs = librosa.feature.mfcc(
-        sample_audio_resampled, target_sr, n_mfcc=20, hop_length=hop_length, n_fft=window_size)
+        y=sample_audio_resampled, sr=target_sr, n_mfcc=20, hop_length=hop_length, n_fft=window_size)
 
-    print("Sample mfccs : ", sample_mfccs.shape)
-    print("Test mfccs : ", test_mfccs.shape)
+    ## Sliding Window Algorithm
 
     sample_len = len(sample_audio_resampled)
     test_len = len(test_audio_resampled)
 
     slice_size = test_len
     step_size = test_len // 2
-
-    # Set the threshold for considering a match
-    threshold = 50
 
     # Initialize a list to store the times of the matches
     times = []
@@ -232,8 +215,8 @@ def getTimestampsFromAudio():
             break
         sliced_audio = sample_audio_resampled[i:i + slice_size]
         sliced_mfccs = librosa.feature.mfcc(
-            sliced_audio, target_sr, n_mfcc=20, hop_length=hop_length, n_fft=window_size)
-
+            y=sliced_audio, sr=target_sr, n_mfcc=20, hop_length=hop_length, n_fft=window_size)
+       
         # Calculate the DTW distance between the MFCCs
         sliced_mfccs = sliced_mfccs.flatten()
         test_mfccs = test_mfccs.flatten()
@@ -241,22 +224,22 @@ def getTimestampsFromAudio():
             -1, sliced_mfccs.shape[0]), test_mfccs.reshape(-1, test_mfccs.shape[0]), dist=euclidean)
         distances.append(distance)
 
-        # Check if the DTW distance is below the threshold
-        # if distance > threshold and distance > 0:
+        # Check if the DTW distance
         if distance > 0:
             # Calculate the time of the match
             time = (i) / target_sr
             times.append(time)
-            output[round(distance, 2)] = time
+            output[round(distance, 2)] = round(time, 2)
 
     sorted_dict = dict(sorted(output.items(), key=lambda x: x[0]))
-    out_dict = dict(list(sorted_dict.items())[0: 10])
-
-    for key, value in out_dict.items():
-        print(round(key, 2), " : ", round(value, 2))
-
-    return json.dumps(dict({"timestamps": list(out_dict.values())}))
-
+    out_dict = dict(list(sorted_dict.items())[0: 1])
+    
+    timestamps = []
+    searchAudioLen = round(test_len/target_sr,2)
+    for key, value in out_dict.items() :
+        timestamps.append([value, value+searchAudioLen])
+    
+    return {"timestamps": timestamps}
 
 if __name__ == '__main__':
     app.run(debug=True)
