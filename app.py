@@ -163,8 +163,8 @@ def getContextForSentence():
         similarity_score = doc1.similarity(doc2)
 
         if (similarity_score >= threshold):
-            start_end.append(segment["start"])
-            start_end.append(segment["end"])
+            start_end.append(round(segment["start"],2))
+            start_end.append(round(segment["end"],2))
 
             similarity_array_timestamp.append(start_end)
 
